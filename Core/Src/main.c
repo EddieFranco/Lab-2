@@ -55,6 +55,24 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
+void EXTI0_1_IRQHandler()
+		{
+		 volatile uint32_t counter = 0;
+// Toggle both pin output states within the endless loop.
+		GPIOC->ODR ^= (GPIO_ODR_9 | GPIO_ODR_8); // Toggle PC8 and PC9
+		//HAL_Delay(200); // Delay 200ms
+
+		while(	counter <=1500000){
+			counter++;
+		}
+		
+		GPIOC->ODR ^= (GPIO_ODR_6 | GPIO_ODR_7);
+		
+		counter =0; 
+		
+		EXTI->PR |= EXTI_PR_PR0_Msk ;
+	
+		}
 
 /**
   * @brief  The application entry point.
@@ -62,40 +80,68 @@ void SystemClock_Config(void);
   */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
-
-  /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
 
-  /* USER CODE BEGIN Init */
-
-  /* USER CODE END Init */
-
-  /* Configure the system clock */
   SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
+	
 
-  /* USER CODE END SysInit */
+ __HAL_RCC_GPIOC_CLK_ENABLE(); // Enable the GPIOC clock in the RCC
+// Set up a configuration struct to pass to the initialization function
+GPIO_InitTypeDef initStr = {GPIO_PIN_6|GPIO_PIN_7| GPIO_PIN_8 | GPIO_PIN_9,
+GPIO_MODE_OUTPUT_PP,
+GPIO_SPEED_FREQ_LOW,
+GPIO_NOPULL};
 
-  /* Initialize all configured peripherals */
-  /* USER CODE BEGIN 2 */
+HAL_GPIO_Init(GPIOC, &initStr); // Initialize pins 
 
-  /* USER CODE END 2 */
+HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); // Start PC9 high
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-    /* USER CODE END WHILE */
 
-    /* USER CODE BEGIN 3 */
-  }
-  /* USER CODE END 3 */
+
+//Configure the button pin (PA0) to input-mode at low-speed, with the internal pull-down
+//resistor enabled.
+RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
+//Set to input mode in the MODER register.
+GPIOA->MODER &= ~ (GPIO_MODER_MODER0_Msk);
+//Set  to low speed in the OSPEEDR register
+GPIOA->OSPEEDR &= ~(GPIO_OSPEEDR_OSPEEDR0_Msk);
+//Enable the pull-down resistor in the PUPDR register
+GPIOA->OSPEEDR &= ~(GPIO_PUPDR_PUPDR0_Msk);
+
+
+// Enable/unmask interrupt generation on EXTI input line 0 (EXTI0).
+EXTI->IMR |= EXTI_IMR_MR0_Msk;
+// Configure the EXTI input line 0 to have a rising-edge trigger.
+EXTI->RTSR |= EXTI_RTSR_TR0_Msk ;
+
+//Use the RCC to enable the peripheral clock to the SYSCFG peripheral.
+RCC->APB2ENR |= RCC_APB2ENR_SYSCFGCOMPEN_Msk ;
+// Configure the multiplexer to route PA0 to the EXTI input line 0 (EXTI0).
+SYSCFG->EXTICR[0] |= SYSCFG_EXTICR1_EXTI0_PA;
+
+//Enable the selected EXTI interrupt by passing its defined name
+	NVIC_EnableIRQ(5);
+// Set the priority for the interrupt to 1 (high-priority)
+
+	NVIC_SetPriority(SysTick_IRQn, 2);
+	NVIC_SetPriority(EXTI0_1_IRQn, 3);
+	
+//changes the SysTick interrupt priority to 2	
+	
+	//NVIC_SetPriority(EXTI0_1_IRQn, 2);
+	//NVIC_SetPriority(EXTI0_1_IRQn, 3);
+
+while (1) {
+HAL_Delay(400); // Delay 200ms
+// Toggle the output state of both PC8 and PC9
+HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6 );
+
+} 
 }
 
 /**

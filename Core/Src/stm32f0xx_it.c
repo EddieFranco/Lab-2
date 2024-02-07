@@ -122,15 +122,23 @@ void PendSV_Handler(void)
 /**
   * @brief This function handles System tick timer.
   */
+
+volatile uint32_t toggling = 0;
+
 void SysTick_Handler(void)
 {
   /* USER CODE BEGIN SysTick_IRQn 0 */
-
+		toggling ++;
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
   /* USER CODE BEGIN SysTick_IRQn 1 */
-
-  /* USER CODE END SysTick_IRQn 1 */
+		if(toggling%200==0){
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7 );
+		}/* USER CODE END SysTick_IRQn 1 */
+		
+		
+		
+		
 }
 
 /******************************************************************************/
