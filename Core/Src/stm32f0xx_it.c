@@ -123,22 +123,23 @@ void PendSV_Handler(void)
   * @brief This function handles System tick timer.
   */
 
+
+//use either a volatile global or local-static variable to store interrupt
+//count.
 volatile uint32_t toggling = 0;
 
 void SysTick_Handler(void)
 {
-  /* USER CODE BEGIN SysTick_IRQn 0 */
-		toggling ++;
-  /* USER CODE END SysTick_IRQn 0 */
+	//Modify the SysTick handler so that it toggles the blue LED (PC7) every 200ms
+	toggling ++;
+  
   HAL_IncTick();
-  /* USER CODE BEGIN SysTick_IRQn 1 */
-		if(toggling%200==0){
+  //toggling an LED every 200th execution of the interrupt results in 200 ms
+	//between blinks.
+		if(toggling%200==0)
+			{
 			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7 );
-		}/* USER CODE END SysTick_IRQn 1 */
-		
-		
-		
-		
+			}
 }
 
 /******************************************************************************/

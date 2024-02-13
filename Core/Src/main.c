@@ -20,30 +20,7 @@
 #include "main.h"
 
 /* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
 
-/* USER CODE END Includes */
-
-/* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN PTD */
-
-/* USER CODE END PTD */
-
-/* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN PD */
-
-/* USER CODE END PD */
-
-/* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
-
-/* USER CODE END PM */
-
-/* Private variables ---------------------------------------------------------*/
-
-/* USER CODE BEGIN PV */
-
-/* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -55,21 +32,20 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
+
 void EXTI0_1_IRQHandler()
 		{
 		 volatile uint32_t counter = 0;
-// Toggle both pin output states within the endless loop.
-		GPIOC->ODR ^= (GPIO_ODR_9 | GPIO_ODR_8); // Toggle PC8 and PC9
-		//HAL_Delay(200); // Delay 200ms
-
+		// Toggle both the green and orange LEDs (PC8 & PC9) in the EXTI interrupt handler
+		GPIOC->ODR ^= (GPIO_ODR_9 | GPIO_ODR_8); 
+	
 		while(	counter <=1500000){
 			counter++;
 		}
-		
-		GPIOC->ODR ^= (GPIO_ODR_6 | GPIO_ODR_7);
-		
+		GPIOC->ODR ^= (GPIO_ODR_9 | GPIO_ODR_8);
+		//GPIOC->ODR ^= (GPIO_ODR_6 | GPIO_ODR_7);
 		counter =0; 
-		
+		//Clear the appropriate flag for input line 0 in the EXTI pending register within the handler
 		EXTI->PR |= EXTI_PR_PR0_Msk ;
 	
 		}
@@ -88,22 +64,22 @@ int main(void)
 
   SystemClock_Config();
 
+	__HAL_RCC_GPIOC_CLK_ENABLE(); // Enable the GPIOC clock in the RCC
+	// Set up a configuration struct to pass to the initialization function
+	GPIO_InitTypeDef initStr = {GPIO_PIN_6|GPIO_PIN_7| GPIO_PIN_8 | GPIO_PIN_9,
+	GPIO_MODE_OUTPUT_PP,
+	GPIO_SPEED_FREQ_LOW,
+	GPIO_NOPULL};
+	
+	// Initialize all of the LED pins in the main function.
+	HAL_GPIO_Init(GPIOC, &initStr); 
+	// Set the green LED (PC9) high
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); 
+
 	
 
- __HAL_RCC_GPIOC_CLK_ENABLE(); // Enable the GPIOC clock in the RCC
-// Set up a configuration struct to pass to the initialization function
-GPIO_InitTypeDef initStr = {GPIO_PIN_6|GPIO_PIN_7| GPIO_PIN_8 | GPIO_PIN_9,
-GPIO_MODE_OUTPUT_PP,
-GPIO_SPEED_FREQ_LOW,
-GPIO_NOPULL};
 
-HAL_GPIO_Init(GPIOC, &initStr); // Initialize pins 
-
-HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); // Start PC9 high
-
-
-
-//Configure the button pin (PA0) to input-mode at low-speed, with the internal pull-down
+//1. Configure the button pin (PA0) to input-mode at low-speed, with the internal pull-down
 //resistor enabled.
 RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
 //Set to input mode in the MODER register.
@@ -113,35 +89,36 @@ GPIOA->OSPEEDR &= ~(GPIO_OSPEEDR_OSPEEDR0_Msk);
 //Enable the pull-down resistor in the PUPDR register
 GPIOA->OSPEEDR &= ~(GPIO_PUPDR_PUPDR0_Msk);
 
-
+// 2. Configuring the EXTI
 // Enable/unmask interrupt generation on EXTI input line 0 (EXTI0).
 EXTI->IMR |= EXTI_IMR_MR0_Msk;
 // Configure the EXTI input line 0 to have a rising-edge trigger.
 EXTI->RTSR |= EXTI_RTSR_TR0_Msk ;
 
+//3. Setting the SYSCFG Pin Multiplexer
 //Use the RCC to enable the peripheral clock to the SYSCFG peripheral.
 RCC->APB2ENR |= RCC_APB2ENR_SYSCFGCOMPEN_Msk ;
 // Configure the multiplexer to route PA0 to the EXTI input line 0 (EXTI0).
 SYSCFG->EXTICR[0] |= SYSCFG_EXTICR1_EXTI0_PA;
 
+
 //Enable the selected EXTI interrupt by passing its defined name
 	NVIC_EnableIRQ(5);
-// Set the priority for the interrupt to 1 (high-priority)
-
-	NVIC_SetPriority(SysTick_IRQn, 2);
-	NVIC_SetPriority(EXTI0_1_IRQn, 3);
+//Set the priority for the interrupt to 1 (high-priority)
+	
+	NVIC_SetPriority(SysTick_IRQn, 1);
+	NVIC_SetPriority(EXTI0_1_IRQn, 2);
 	
 //changes the SysTick interrupt priority to 2	
-	
-	//NVIC_SetPriority(EXTI0_1_IRQn, 2);
+	//NVIC_SetPriority(SysTick_IRQn, 2);
 	//NVIC_SetPriority(EXTI0_1_IRQn, 3);
 
-while (1) {
-HAL_Delay(400); // Delay 200ms
-// Toggle the output state of both PC8 and PC9
-HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6 );
-
-} 
+while (1) 
+	{
+	HAL_Delay(400); // Delay 400ms
+	// Toggle the red LED (PC6) with a moderately-slow delay (400-600ms) in the infinite loop
+	HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6 );
+	} 
 }
 
 /**
